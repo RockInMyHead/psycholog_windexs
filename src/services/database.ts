@@ -348,6 +348,25 @@ export const userService = {
     return user ? convertUser(user) : undefined;
   },
 
+  async createUser(email: string, name: string): Promise<User> {
+    await delay();
+    const store = loadStore();
+    const now = new Date().toISOString();
+
+    const user: StoredUser = {
+      id: generateId('user'),
+      name,
+      email,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    store.users[user.id] = user;
+    saveStore(store);
+
+    return convertUser(user);
+  },
+
   async updateUser(id: ID, data: Partial<Omit<User, 'id'>>): Promise<User | undefined> {
     await delay();
     const store = loadStore();
