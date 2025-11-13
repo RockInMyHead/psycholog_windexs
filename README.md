@@ -1,86 +1,122 @@
-# Welcome to your Lovable project
+# Windexs-Психолог 🤖💬
 
-## Project info
+Профессиональная психологическая поддержка с помощью искусственного интеллекта. Чат, аудио звонки, медитации и вдохновляющие фразы для вашего благополучия.
 
-**URL**: https://lovable.dev/projects/52caa2f5-b7ae-4035-8a11-031439d58c5f
+## 🌟 Возможности
 
-## How can I edit this code?
+### ✨ Основные функции
+- **AI-психолог Марк** - профессиональная поддержка в стиле Михаила Лабковского
+- **Безлимитный чат** - круглосуточная поддержка
+- **Аудио звонки** - голосовые сессии с психологом
+- **Мудрые фразы** - вдохновляющие цитаты с системой лайков
+- **Медитации** - практики для релаксации и осознанности
+- **Персональный профиль** - отслеживание прогресса
 
-There are several ways of editing your application.
+### 💳 Система подписки
+- **Бесплатный план**: безлимитный чат
+- **Премиум план**: 799 ₽/мес, 4 аудио сессии + все возможности
 
-**Use Lovable**
+## 🚀 Быстрый старт
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/52caa2f5-b7ae-4035-8a11-031439d58c5f) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### 1. Клонирование репозитория
+```bash
+git clone https://github.com/RockInMyHead/psycholog_windexs.git
+cd psycholog_windexs
 ```
 
-**Edit a file directly in GitHub**
+### 2. Установка зависимостей
+```bash
+# Frontend
+npm install
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+# Прокси-сервер (опционально)
+cd server
+npm install
+cd ..
+```
 
-**Use GitHub Codespaces**
+### 3. Настройка переменных окружения
+```bash
+cp .env.example .env
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Отредактируйте `.env` файл:
+```env
+# OpenAI API Configuration
+REACT_APP_OPENAI_API_KEY=ваш_openai_api_key
 
-## What technologies are used for this project?
+# Proxy Configuration (если используется)
+REACT_APP_PROXY_HOST=185.68.187.20
+REACT_APP_PROXY_PORT=8000
+REACT_APP_PROXY_USERNAME=rBD9e6
+REACT_APP_PROXY_PASSWORD=jZdUnJ
 
-This project is built with:
+# API Configuration
+REACT_APP_API_BASE_URL=https://psycholog.windexs.ru
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-- SQLite (with Drizzle ORM)
-- OpenAI GPT-4o-mini (for AI psychologist)
+### 4. Запуск приложения
 
-## AI Psychologist Configuration
+#### Production режим (рекомендуемый)
+```bash
+npm run dev
+```
+Приложение будет доступно на `http://localhost:8080`
 
-The chat feature includes an AI psychologist powered by OpenAI GPT-4o-mini. To enable it:
+#### Development режим с локальным прокси
+```bash
+npm run dev:with-proxy
+```
+Запустится frontend + локальный прокси-сервер
 
-1. Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Create a `.env` file in the project root
-3. Add your API key: `REACT_APP_OPENAI_API_KEY=your_api_key_here`
-4. Restart the development server
+## 🛠️ Технологии
 
-**Note**: The AI psychologist "Mark" follows the methodology of Mikhail Labkovsky - focusing on helping users understand themselves rather than giving direct advice.
+- **Frontend**: React + TypeScript + Vite
+- **UI**: Shadcn/ui + Tailwind CSS
+- **Database**: SQLite + Drizzle ORM
+- **AI**: OpenAI GPT-4o-mini
+- **Authentication**: JWT-based
+- **Proxy**: HTTPS-proxy-agent для обхода ограничений
 
-## How can I deploy this project?
+## 📁 Структура проекта
 
-Simply open [Lovable](https://lovable.dev/projects/52caa2f5-b7ae-4035-8a11-031439d58c5f) and click on Share -> Publish.
+```
+├── src/
+│   ├── components/        # UI компоненты
+│   ├── pages/            # Страницы приложения
+│   ├── services/         # Сервисы (API, database)
+│   ├── db/              # База данных
+│   └── contexts/        # React контексты
+├── server/              # Прокси-сервер
+├── public/              # Статические файлы
+└── .env.example         # Пример конфигурации
+```
 
-## Can I connect a custom domain to my Lovable project?
+## 🔧 Настройка API
 
-Yes, you can!
+Подробная инструкция по настройке API находится в файле `API_SETUP.md`.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Кратко:
+1. **Получите API ключ** от OpenAI
+2. **Настройте прокси** (если требуется)
+3. **Разверните API сервер** на домене psycholog.windexs.ru
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 🤝 Вклад в проект
+
+1. Fork репозиторий
+2. Создайте feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit изменения (`git commit -m 'Add some AmazingFeature'`)
+4. Push в branch (`git push origin feature/AmazingFeature`)
+5. Создайте Pull Request
+
+## 📄 Лицензия
+
+Этот проект является закрытым и предназначен только для личного использования.
+
+## 📞 Контакты
+
+**Windexs-Психолог** - ваш надежный помощник в мире психологии и саморазвития! 🌱💪
+
+---
+
+*Создано с ❤️ для помощи людям в их пути к внутренней гармонии*
