@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      '/api': {
+        target: process.env.REACT_APP_API_BASE_URL || 'https://psycholog.windexs.ru',
+        changeOrigin: true,
+        secure: process.env.REACT_APP_API_BASE_URL?.startsWith('https') ?? true,
+        rewrite: (path) => path,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

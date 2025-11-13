@@ -1,29 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import Navigation from "@/components/Navigation";
+import { userService, audioCallService, chatService } from "@/services/database";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AudioCall = () => {
+  const { user: authUser } = useAuth();
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const startCall = () => {
-    setIsCallActive(true);
-    // Simulate call duration counter
-    const interval = setInterval(() => {
-      setCallDuration((prev) => prev + 1);
-    }, 1000);
-    
-    return () => clearInterval(interval);
+  // Default user ID for demo purposes
+  const defaultUserId = 'user@zenmindmate.com';
+
+  useEffect(() => {
+    initializeUser();
+  }, [authUser]);
+
+  const initializeUser = async () => {
+    try {
+      const userData = await userService.getOrCreateUser(defaultUserId, 'Пользователь');
+      setUser(userData);
+    } catch (error) {
+      console.error('Error initializing user:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const endCall = () => {
-    setIsCallActive(false);
-    setCallDuration(0);
-    setIsMuted(false);
+  const startCall = async () => {
+    if (!user) return;
+
+    try {
+      // Create audio call record in database
+      const call = await audioCallService.createAudioCall(user.id);
+      setCurrentCallId(call.id);
+
+      setIsCallActive(true);
+
+      // Start call duration counter
+      const interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+
+      // Store interval ID for cleanup
+      return () => clearInterval(interval);
+    } catch (error) {
+      console.error('Error starting call:', error);
+    }
+  };
+
+  const endCall = async () => {
+    if (!currentCallId) return;
+
+    try {
+      // Update call record with duration
+      await audioCallService.endAudioCall(currentCallId, callDuration);
+
+      setIsCallActive(false);
+      setCallDuration(0);
+      setIsMuted(false);
+      setCurrentCallId(null);
+    } catch (error) {
+      console.error('Error ending call:', error);
+    }
   };
 
   const formatDuration = (seconds: number) => {
@@ -46,8 +92,8 @@ const AudioCall = () => {
           <Card className="bg-card-gradient border-2 border-border shadow-strong p-8 md:p-12 text-center animate-scale-in">
             {!isCallActive ? (
               <div className="space-y-8">
-                <div className="w-32 h-32 mx-auto rounded-full bg-hero-gradient flex items-center justify-center shadow-strong animate-pulse-soft">
-                  <Phone className="w-16 h-16 text-white" />
+                <div className="w-32 h-32 mx-auto rounded-full bg-hero-gradient text-white flex items-center justify-center shadow-strong animate-pulse-soft">
+                  <Phone className="w-16 h-16 " />
                 </div>
                 
                 <div>
@@ -62,10 +108,11 @@ const AudioCall = () => {
                 <Button
                   onClick={startCall}
                   size="lg"
-                  className="bg-hero-gradient hover:opacity-90 text-white shadow-medium text-lg px-12 py-6"
+                  className="bg-hero-gradient text-white hover:shadow-lg  shadow-medium text-lg px-12 py-6"
+                  disabled={loading}
                 >
                   <Phone className="w-6 h-6 mr-2" />
-                  Позвонить
+                  {loading ? "Загрузка..." : "Позвонить"}
                 </Button>
 
                 <div className="pt-8 border-t border-border">
@@ -80,15 +127,15 @@ const AudioCall = () => {
               </div>
             ) : (
               <div className="space-y-8">
-                <div className="w-40 h-40 mx-auto rounded-full bg-hero-gradient flex items-center justify-center shadow-strong animate-float">
-                  <Volume2 className="w-20 h-20 text-white animate-pulse" />
+                <div className="w-40 h-40 mx-auto rounded-full bg-hero-gradient text-white flex items-center justify-center shadow-strong animate-float">
+                  <Volume2 className="w-20 h-20  animate-pulse" />
                 </div>
 
                 <div>
                   <h2 className="text-2xl font-bold text-foreground mb-2">
                     Звонок идет
                   </h2>
-                  <p className="text-3xl font-mono text-primary">
+                  <p className="text-3xl font-mono text-white">
                     {formatDuration(callDuration)}
                   </p>
                 </div>

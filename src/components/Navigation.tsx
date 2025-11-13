@@ -1,12 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, MessageCircle, Phone, Lightbulb, PlayCircle, User } from "lucide-react";
+import { Menu, X, Home, MessageCircle, Phone, Lightbulb, PlayCircle, User, Crown, LogOut } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { path: "/", label: "Главная", icon: Home },
@@ -14,6 +16,7 @@ const Navigation = () => {
     { path: "/audio", label: "Звонок", icon: Phone },
     { path: "/quotes", label: "Фразы", icon: Lightbulb },
     { path: "/meditations", label: "Медитации", icon: PlayCircle },
+    { path: "/subscription", label: "Подписка", icon: Crown },
     { path: "/profile", label: "Профиль", icon: User },
   ];
 
@@ -49,6 +52,25 @@ const Navigation = () => {
               );
             })}
           </div>
+
+          {/* User Info & Logout */}
+          {user && (
+            <div className="hidden md:flex items-center gap-3 ml-4 pl-4 border-l border-border">
+              <div className="flex items-center gap-2 text-sm">
+                <User className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground">{user.name}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4" />
+                Выйти
+              </Button>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
           <Button
@@ -86,6 +108,27 @@ const Navigation = () => {
                 </Link>
               );
             })}
+
+            {/* Mobile Logout */}
+            {user && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-3 mb-3 px-2">
+                  <User className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium">{user.name}</span>
+                </div>
+                <Button
+                  onClick={() => {
+                    logout();
+                    setIsOpen(false);
+                  }}
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Выйти
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

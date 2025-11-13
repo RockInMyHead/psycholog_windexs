@@ -1,75 +1,88 @@
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Lightbulb, Heart, Sparkles } from "lucide-react";
 import Navigation from "@/components/Navigation";
-
-const quotes = [
-  {
-    text: "Единственный способ сделать что-то хорошо — полюбить то, что вы делаете.",
-    author: "Стив Джобс",
-    category: "Мотивация"
-  },
-  {
-    text: "Жизнь — это то, что происходит с вами, пока вы строите другие планы.",
-    author: "Джон Леннон",
-    category: "Жизнь"
-  },
-  {
-    text: "Путь в тысячу миль начинается с первого шага.",
-    author: "Лао-цзы",
-    category: "Начинания"
-  },
-  {
-    text: "Не важно, как медленно вы идете, главное — не останавливаться.",
-    author: "Конфуций",
-    category: "Настойчивость"
-  },
-  {
-    text: "Счастье — это не цель, а способ жить.",
-    author: "Далай-лама",
-    category: "Счастье"
-  },
-  {
-    text: "Будьте тем изменением, которое хотите видеть в мире.",
-    author: "Махатма Ганди",
-    category: "Вдохновение"
-  },
-  {
-    text: "Лучшее время посадить дерево было 20 лет назад. Второе лучшее время — сейчас.",
-    author: "Китайская пословица",
-    category: "Действие"
-  },
-  {
-    text: "Успех — это способность идти от неудачи к неудаче, не теряя энтузиазма.",
-    author: "Уинстон Черчилль",
-    category: "Успех"
-  },
-  {
-    text: "Ваше время ограничено, не тратьте его на жизнь чужой жизнью.",
-    author: "Стив Джобс",
-    category: "Аутентичность"
-  },
-  {
-    text: "Единственная невозможная вещь — это та, которую вы не попытались сделать.",
-    author: "Неизвестный автор",
-    category: "Возможности"
-  },
-  {
-    text: "Падать — это нормально. Подниматься — обязательно.",
-    author: "Конфуций",
-    category: "Стойкость"
-  },
-  {
-    text: "Мудрость приходит с опытом, а опыт — с ошибками.",
-    author: "Оскар Уайльд",
-    category: "Мудрость"
-  },
-];
+import { userService, quoteService } from "@/services/database";
 
 const Quotes = () => {
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [userQuoteViews, setUserQuoteViews] = useState<Map<string, boolean>>(new Map());
+  const [showLikedOnly, setShowLikedOnly] = useState(false);
+  const [likedQuotes, setLikedQuotes] = useState<any[]>([]);
+
+  // Default user ID for demo purposes
+  const defaultUserId = 'user@zenmindmate.com';
+
+  useEffect(() => {
+    initializeData();
+  }, []);
+
+  const initializeData = async () => {
+    try {
+      setLoading(true);
+
+      // Get or create user
+      const userData = await userService.getOrCreateUser(defaultUserId, 'Пользователь');
+      setUser(userData);
+
+      // Load quotes
+      const quotesData = await quoteService.getAllQuotes();
+      setQuotes(quotesData);
+
+      // Load user's quote views
+      const views = await quoteService.getUserQuoteViews(userData.id, 50);
+      const viewsMap = new Map<string, boolean>();
+      views.forEach(view => {
+        viewsMap.set(view.quote.id, view.view.liked === 1);
+      });
+      setUserQuoteViews(viewsMap);
+
+      // Load liked quotes
+      const liked = await quoteService.getUserLikedQuotes(userData.id, 50);
+      setLikedQuotes(liked.map(item => item.quote));
+
+    } catch (error) {
+      console.error('Error loading quotes data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuoteClick = async (quoteId: string) => {
+    if (!user) return;
+
+    try {
+      // Toggle like status using the new service method
+      await quoteService.toggleQuoteLike(user.id, quoteId);
+
+      // Update local state
+      const currentlyLiked = userQuoteViews.get(quoteId) || false;
+      setUserQuoteViews(prev => new Map(prev.set(quoteId, !currentlyLiked)));
+
+      // Update liked quotes list
+      if (!currentlyLiked) {
+        // Just liked - add to liked quotes
+        const quote = quotes.find(q => q.id === quoteId);
+        if (quote) {
+          setLikedQuotes(prev => [quote, ...prev]);
+        }
+      } else {
+        // Just unliked - remove from liked quotes
+        setLikedQuotes(prev => prev.filter(q => q.id !== quoteId));
+      }
+
+    } catch (error) {
+      console.error('Error handling quote interaction:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-calm-gradient">
       <Navigation />
-      
+
       <div className="pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12 animate-fade-in">
@@ -83,34 +96,81 @@ const Quotes = () => {
             </p>
           </div>
 
+          {/* Filter Buttons */}
+          <div className="flex justify-center gap-4 mb-8">
+            <Button
+              onClick={() => setShowLikedOnly(false)}
+              variant={!showLikedOnly ? "default" : "outline"}
+              className={!showLikedOnly ? "bg-hero-gradient text-white hover:shadow-lg" : ""}
+            >
+              <Lightbulb className="w-4 h-4 mr-2" />
+              Все цитаты ({quotes.length})
+            </Button>
+            <Button
+              onClick={() => setShowLikedOnly(true)}
+              variant={showLikedOnly ? "default" : "outline"}
+              className={showLikedOnly ? "bg-hero-gradient text-white hover:shadow-lg" : ""}
+            >
+              <Heart className="w-4 h-4 mr-2" />
+              Понравившиеся ({likedQuotes.length})
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quotes.map((quote, index) => (
-              <Card
-                key={index}
-                className="p-6 bg-card-gradient border-2 border-border hover:border-primary/30 shadow-soft hover:shadow-medium transition-all cursor-pointer group animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-medium">
-                    <Lightbulb className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                      {quote.category}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-foreground text-lg leading-relaxed mb-4 italic">
-                  "{quote.text}"
+            {loading ? (
+              <div className="col-span-full text-center py-12">
+                <Lightbulb className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
+                <p className="text-muted-foreground">Загрузка цитат...</p>
+              </div>
+            ) : (showLikedOnly ? likedQuotes : quotes).length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <Heart className="w-12 h-12 mx-auto mb-4 text-primary" />
+                <p className="text-muted-foreground">
+                  {showLikedOnly ? "У вас пока нет понравившихся цитат" : "Цитаты не найдены"}
                 </p>
+              </div>
+            ) : (
+              (showLikedOnly ? likedQuotes : quotes).map((quote, index) => {
+                const isLiked = userQuoteViews.get(quote.id) || false;
+                return (
+                  <Card
+                    key={quote.id}
+                    className="p-6 bg-card-gradient border-2 border-border hover:border-primary/30 shadow-soft hover:shadow-medium transition-all cursor-pointer group animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-medium">
+                        <Lightbulb className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1 flex justify-between items-start">
+                        <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                          {quote.category}
+                        </span>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuoteClick(quote.id);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className={`p-1 h-auto ${isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'}`}
+                        >
+                          <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                        </Button>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t border-border">
-                  <Heart className="w-4 h-4 text-accent" />
-                  <span className="font-medium">{quote.author}</span>
-                </div>
-              </Card>
-            ))}
+                    <p className="text-foreground text-lg leading-relaxed mb-4 italic">
+                      "{quote.text}"
+                    </p>
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t border-border">
+                      <span className="font-medium">{quote.author}</span>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

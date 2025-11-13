@@ -153,7 +153,7 @@ const Index = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link to="/chat">
-                <Button size="lg" className="bg-hero-gradient hover:opacity-90 text-white shadow-medium hover:shadow-strong transition-all text-lg px-10 py-7 animate-scale-in">
+                <Button size="lg" className="bg-hero-gradient hover:brightness-110 text-white shadow-medium hover:shadow-strong transition-all text-lg px-10 py-7 animate-scale-in">
                   <MessageCircle className="w-6 h-6 mr-2" />
                   Начать чат
                 </Button>

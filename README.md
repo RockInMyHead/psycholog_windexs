@@ -59,6 +59,19 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- SQLite (with Drizzle ORM)
+- OpenAI GPT-4o-mini (for AI psychologist)
+
+## AI Psychologist Configuration
+
+The chat feature includes an AI psychologist powered by OpenAI GPT-4o-mini. To enable it:
+
+1. Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Create a `.env` file in the project root
+3. Add your API key: `REACT_APP_OPENAI_API_KEY=your_api_key_here`
+4. Restart the development server
+
+**Note**: The AI psychologist "Mark" follows the methodology of Mikhail Labkovsky - focusing on helping users understand themselves rather than giving direct advice.
 
 ## How can I deploy this project?
 
