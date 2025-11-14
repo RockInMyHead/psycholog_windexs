@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Clock, Sparkles, Star, CheckCircle } from "lucide-react";
+import { PlayCircle, Clock, Star, Wind } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import { userService, meditationService } from "@/services/database";
 
@@ -51,11 +52,11 @@ const meditations = [
 ];
 
 const Meditations = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentMeditation, setCurrentMeditation] = useState<any>(null);
   const [meditationStartTime, setMeditationStartTime] = useState<Date | null>(null);
-  const [completedMeditations, setCompletedMeditations] = useState<any[]>([]);
   const [showRating, setShowRating] = useState(false);
 
   // Default user ID for demo purposes
@@ -71,9 +72,6 @@ const Meditations = () => {
       const userData = await userService.getOrCreateUser(defaultUserId, 'Пользователь');
       setUser(userData);
 
-      // Load completed meditations
-      const completed = await meditationService.getUserMeditationSessions(userData.id, 10);
-      setCompletedMeditations(completed);
     } catch (error) {
       console.error('Error initializing user:', error);
     } finally {
@@ -100,10 +98,6 @@ const Meditations = () => {
         notes
       );
 
-      // Reload completed meditations
-      const completed = await meditationService.getUserMeditationSessions(user.id, 10);
-      setCompletedMeditations(completed);
-
       setCurrentMeditation(null);
       setMeditationStartTime(null);
       setShowRating(false);
@@ -116,31 +110,57 @@ const Meditations = () => {
     setShowRating(true);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
   return (
     <div className="min-h-screen bg-calm-gradient">
       <Navigation />
       
-      <div className="pt-24 pb-12 px-4">
+      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-white mb-4">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium">Релаксация</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">Медитации</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3">Медитации</h1>
             <p className="text-muted-foreground text-lg">
               Видео для релаксации, осознанности и внутреннего покоя
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Special card for Meditation with Mark */}
+            <Card className="overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 shadow-soft hover:shadow-medium transition-all group cursor-pointer animate-fade-in">
+              <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <div className="text-center">
+                  <Wind className="w-16 h-16 text-primary mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-primary mb-2">Медитация с Марком</h3>
+                  <p className="text-sm text-muted-foreground">Интерактивная йога-медитация</p>
+                </div>
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    onClick={() => navigate('/meditation-with-marque')}
+                    className="w-16 h-16 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-strong"
+                    size="icon"
+                  >
+                    <Wind className="w-10 h-10 text-primary" />
+                  </Button>
+                </div>
+                <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-sm flex items-center gap-1 text-sm text-primary font-medium">
+                  <Wind className="w-3 h-3" />
+                  Марк
+                </div>
+              </div>
+
+              <div className="p-5">
+                <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
+                  Медитация с Марком
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-3">
+                  Интерактивная йога-медитация с персональными инструкциями от ИИ-психолога Марка
+                </p>
+                <div className="flex items-center gap-2 text-xs text-primary font-medium">
+                  <Wind className="w-3 h-3" />
+                  <span>Йога-позы • Анализ формы • TTS инструкции</span>
+                </div>
+              </div>
+            </Card>
+
             {meditations.map((meditation, index) => (
               <Card
                 key={index}
@@ -193,41 +213,10 @@ const Meditations = () => {
             </Card>
           </div>
 
-          {/* Recent Meditations */}
-          {!loading && completedMeditations.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-2xl font-bold text-foreground mb-6 text-center">Ваши медитации</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {completedMeditations.map((session, index) => (
-                  <Card key={index} className="p-4 bg-card-gradient border-2 border-border">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="font-medium text-foreground">{session.meditationTitle}</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3 h-3" />
-                        <span>{session.duration} мин</span>
-                      </div>
-                      {session.rating && (
-                        <div className="flex items-center gap-1">
-                          {[...Array(session.rating)].map((_, i) => (
-                            <Star key={i} className="w-3 h-3 text-yellow-500 fill-current" />
-                          ))}
-                        </div>
-                      )}
-                      <div className="text-xs">{formatDate(session.completedAt)}</div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Meditation Modal */}
           {currentMeditation && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <Card className="max-w-md w-full bg-card p-6">
+              <Card className="max-w-sm sm:max-w-md w-full bg-card p-4 sm:p-6">
                 <div className="text-center">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-hero-gradient text-white flex items-center justify-center">
                     <PlayCircle className="w-8 h-8 " />

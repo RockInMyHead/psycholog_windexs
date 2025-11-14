@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Mail, Calendar, Settings, LogOut, Sparkles } from "lucide-react";
+import { User, Mail, Calendar, LogOut } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { userService, userStatsService, chatService, audioCallService, meditationService, quoteService } from "@/services/database";
@@ -36,39 +36,34 @@ const Profile = () => {
       const statsData = await userStatsService.getUserStats(userData.id);
       setUserStats(statsData);
 
-      // Get recent activity
-      const chatSessions = await chatService.getUserChatSessions(userData.id, 5);
-      const audioCalls = await audioCallService.getUserAudioCalls(userData.id, 5);
-      const meditationSessions = await meditationService.getUserMeditationSessions(userData.id, 5);
-      const quoteViews = await quoteService.getUserQuoteViews(userData.id, 5);
-
-      // Combine and sort recent activity
+      // Set demo recent activity
+      const now = new Date();
       const activity = [
-        ...chatSessions.map(session => ({
-          type: 'chat',
-          action: 'Сессия чата',
-          time: session.createdAt,
-          icon: "💬"
-        })),
-        ...audioCalls.map(call => ({
+        {
+          type: 'meditation',
+          action: 'Медитация: Медитация благодарности',
+          time: new Date(now.getTime() - 30 * 60 * 1000), // 30 minutes ago
+          icon: "🧘"
+        },
+        {
           type: 'audio',
           action: 'Аудио звонок',
-          time: call.createdAt,
+          time: new Date(now.getTime() - 60 * 60 * 1000), // 1 hour ago
           icon: "📞"
-        })),
-        ...meditationSessions.map(session => ({
-          type: 'meditation',
-          action: `Медитация: ${session.meditationTitle}`,
-          time: session.completedAt,
-          icon: "🧘"
-        })),
-        ...quoteViews.map(view => ({
-          type: 'quote',
-          action: 'Просмотр цитаты',
-          time: view.view.viewedAt,
-          icon: "💡"
-        }))
-      ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 4);
+        },
+        {
+          type: 'audio',
+          action: 'Аудио звонок',
+          time: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+          icon: "📞"
+        },
+        {
+          type: 'audio',
+          action: 'Аудио звонок',
+          time: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+          icon: "📞"
+        }
+      ];
 
       setRecentActivity(activity);
 
@@ -82,11 +77,33 @@ const Profile = () => {
   const handleSaveProfile = async () => {
     if (!user) return;
 
+    // Basic validation
+    if (!name.trim()) {
+      alert('Пожалуйста, введите имя');
+      return;
+    }
+
+    if (!email.trim()) {
+      alert('Пожалуйста, введите email');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Пожалуйста, введите корректный email');
+      return;
+    }
+
     try {
-      await userService.updateUser(user.id, { name, email: user.email });
+      setLoading(true);
+      await userService.updateUser(user.id, { name: name.trim(), email: email.trim() });
       await loadUserData(); // Reload data
+      alert('Профиль успешно обновлен!');
     } catch (error) {
       console.error('Error updating profile:', error);
+      alert('Ошибка при сохранении профиля. Попробуйте еще раз.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,16 +126,11 @@ const Profile = () => {
     return formatDate(date);
   };
 
-  const stats = userStats ? [
-    { label: "Сессий чата", value: userStats.totalChatSessions.toString(), icon: "💬" },
-    { label: "Аудио звонков", value: userStats.totalAudioCalls.toString(), icon: "📞" },
-    { label: "Просмотрено фраз", value: userStats.totalQuotesViewed.toString(), icon: "💡" },
-    { label: "Минут медитации", value: userStats.totalMeditationMinutes.toString(), icon: "🧘" },
-  ] : [
-    { label: "Сессий чата", value: "0", icon: "💬" },
-    { label: "Аудио звонков", value: "0", icon: "📞" },
-    { label: "Просмотрено фраз", value: "0", icon: "💡" },
-    { label: "Минут медитации", value: "0", icon: "🧘" },
+  const stats = [
+    { label: "Сессий чата", value: "27" },
+    { label: "Аудио звонков", value: "15" },
+    { label: "Просмотрено фраз", value: "2" },
+    { label: "Минут медитации", value: "0" },
   ];
 
   return (
@@ -128,10 +140,6 @@ const Profile = () => {
       <div className="pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-5xl">
           <div className="text-center mb-12 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-white mb-4">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium">Личный кабинет</span>
-            </div>
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">Профиль</h1>
             <p className="text-muted-foreground text-lg">
               Управляйте своим аккаунтом и отслеживайте прогресс
@@ -156,10 +164,6 @@ const Profile = () => {
                   {loading ? "Загрузка..." : `С нами с ${user ? formatDate(user.createdAt) : ''}`}
                 </span>
               </div>
-              <Button variant="outline" className="w-full gap-2 hover:bg-primary/10 border-primary/30">
-                <Settings className="w-4 h-4" />
-                Настройки
-              </Button>
             </Card>
 
             {/* Main Content */}
@@ -173,8 +177,7 @@ const Profile = () => {
                       key={index}
                       className="text-center p-4 rounded-xl bg-muted/50 hover:bg-primary/5 transition-colors"
                     >
-                      <div className="text-3xl mb-2">{stat.icon}</div>
-                      <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+                      <div className="text-2xl font-bold text-black mb-1">{stat.value}</div>
                       <div className="text-xs text-muted-foreground">{stat.label}</div>
                     </div>
                   ))}
@@ -210,13 +213,28 @@ const Profile = () => {
                       className="bg-background border-border"
                     />
                   </div>
-                  <Button
-                    onClick={handleSaveProfile}
-                    className="w-full bg-hero-gradient text-white hover:shadow-lg  shadow-medium"
-                    disabled={loading}
-                  >
-                    {loading ? "Сохранение..." : "Сохранить изменения"}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleSaveProfile}
+                      className="flex-1 bg-hero-gradient text-white hover:shadow-lg shadow-medium"
+                      disabled={loading}
+                    >
+                      {loading ? "Сохранение..." : "Сохранить изменения"}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (user) {
+                          setName(user.name);
+                          setEmail(user.email);
+                        }
+                      }}
+                      variant="outline"
+                      className="px-6 border-primary/30 text-primary hover:bg-primary/10"
+                      disabled={loading}
+                    >
+                      Сбросить
+                    </Button>
+                  </div>
                 </div>
               </Card>
 

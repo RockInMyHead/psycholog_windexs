@@ -3,29 +3,23 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Chat from "./pages/Chat";
 import AudioCall from "./pages/AudioCall";
 import Quotes from "./pages/Quotes";
 import Meditations from "./pages/Meditations";
+import MeditationWithMarque from "./pages/MeditationWithMarque";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import { initializeDatabase } from "./db/migrations";
-import Navigation from "@/components/Navigation";
 
 const queryClient = new QueryClient();
 
-const AppContent = () => {
+const AppRoutes = () => {
   const { isAuthenticated, loading } = useAuth();
-
-  useEffect(() => {
-    // Initialize database on app start
-    initializeDatabase();
-  }, []);
 
   if (loading) {
     return (
@@ -85,10 +79,26 @@ const AppContent = () => {
           }
         />
         <Route
+          path="/meditation-with-marque"
+          element={
+            <ProtectedRoute>
+              <MeditationWithMarque />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/subscription"
+          element={
+            <ProtectedRoute>
+              <Subscription />
             </ProtectedRoute>
           }
         />
@@ -105,7 +115,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <AppContent />
+          <AppRoutes />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

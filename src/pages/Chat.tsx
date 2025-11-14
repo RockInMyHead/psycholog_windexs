@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Bot, User as UserIcon } from "lucide-react";
+import { Send, Mic, Square, Loader2 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import { userService, chatService } from "@/services/database";
 import { psychologistAI } from "@/services/openai";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 interface Message {
   id: string;
@@ -21,6 +22,16 @@ const Chat = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const messagesRef = useRef<Message[]>([]);
+  const {
+    isRecording,
+    startRecording,
+    stopRecording,
+    requestPermission,
+    hasPermission,
+  } = useAudioRecorder();
 
   // Default user ID for demo purposes
   const defaultUserId = 'user@zenmindmate.com';
@@ -74,29 +85,32 @@ const Chat = () => {
     }
   };
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || !currentSessionId || !user) return;
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const sendMessage = async (content: string) => {
+    if (!content.trim() || !currentSessionId || !user) return;
 
     try {
       // Save user message to database
-      await chatService.addChatMessage(currentSessionId, user.id, inputValue, "user");
+      await chatService.addChatMessage(currentSessionId, user.id, content, "user");
 
       // Add to local state
       const userMessage: Message = {
         id: Date.now().toString(), // Temporary ID for local state
-        text: inputValue,
+        text: content,
         sender: "user",
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, userMessage]);
-      setInputValue("");
 
       // Get AI response
       setIsTyping(true);
       try {
         // Prepare conversation history for AI
-        const conversationHistory = messages.concat(userMessage).map(msg => ({
+        const conversationHistory = messagesRef.current.concat(userMessage).map(msg => ({
           role: msg.sender as 'user' | 'assistant',
           content: msg.text
         }));
@@ -136,19 +150,66 @@ const Chat = () => {
     }
   };
 
+  const handleSend = async () => {
+    const text = inputValue.trim();
+    if (!text) return;
+    setInputValue("");
+    await sendMessage(text);
+  };
+
+  const handleToggleRecording = async () => {
+    try {
+      setAudioError(null);
+
+      if (!isRecording) {
+        if (!hasPermission) {
+          const allowed = await requestPermission();
+          if (!allowed) {
+            setAudioError("Требуется доступ к микрофону.");
+            return;
+          }
+        }
+
+        await startRecording();
+      } else {
+        setIsProcessingAudio(true);
+        try {
+          const audioBlob = await stopRecording();
+
+          if (audioBlob && audioBlob.size > 0) {
+            try {
+              const transcription = await psychologistAI.transcribeAudio(audioBlob);
+              const text = transcription.trim();
+              if (text.length > 0) {
+                await sendMessage(text);
+              } else {
+                setAudioError("Не удалось распознать речь. Попробуйте ещё раз.");
+              }
+            } catch (error) {
+              setAudioError("Ошибка при распознавании речи. Попробуйте ещё раз.");
+            }
+          } else {
+            setAudioError("Похоже, запись не содержит звука.");
+          }
+        } finally {
+          setIsProcessingAudio(false);
+        }
+      }
+    } catch (error) {
+      console.error("Audio recording error:", error);
+      setAudioError("Не удалось получить доступ к микрофону.");
+      setIsProcessingAudio(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-calm-gradient">
       <Navigation />
       
-      <div className="pt-24 pb-8 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-8 animate-fade-in">
-            <h1 className="text-4xl font-bold text-foreground mb-3">Чат с психологом</h1>
-            <p className="text-muted-foreground">Конфиденциальный разговор с психологом Марком</p>
-          </div>
-
-          <Card className="bg-card border-2 border-border shadow-medium animate-scale-in">
-            <div className="h-[500px] md:h-[600px] flex flex-col">
+      <div className="pt-16">
+        <div className="w-full">
+          <Card className="bg-card border-0 shadow-none animate-scale-in rounded-none">
+            <div className="h-[80vh] flex flex-col">
               {/* Messages Area */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {loading ? (
@@ -174,19 +235,6 @@ const Chat = () => {
                       }`}
                     >
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          message.sender === "assistant"
-                            ? "bg-hero-gradient shadow-medium"
-                            : "bg-accent/20"
-                        }`}
-                      >
-                        {message.sender === "assistant" ? (
-                          <Bot className="w-5 h-5 text-white" />
-                        ) : (
-                          <UserIcon className="w-5 h-5 text-accent" />
-                        )}
-                      </div>
-                      <div
                         className={`flex-1 max-w-[80%] p-4 rounded-2xl ${
                           message.sender === "assistant"
                             ? "bg-muted/50 text-foreground"
@@ -208,9 +256,6 @@ const Chat = () => {
                 {/* Typing indicator */}
                 {isTyping && (
                   <div className="flex gap-3 animate-fade-in">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-hero-gradient shadow-medium">
-                      <Bot className="w-5 h-5 text-white" />
-                    </div>
                     <div className="flex-1 max-w-[80%] p-4 rounded-2xl bg-muted/50 text-foreground">
                       <div className="flex items-center gap-1">
                         <div className="flex gap-1">
@@ -226,24 +271,53 @@ const Chat = () => {
               </div>
 
               {/* Input Area */}
-              <div className="border-t border-border p-4 bg-background/50">
+              <div className="border-t border-border">
                 <div className="flex gap-2">
                   <Input
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
                     placeholder="Напишите ваше сообщение..."
                     className="flex-1 bg-background border-border"
+                    disabled={loading || isTyping || isProcessingAudio}
                   />
                   <Button
-                    onClick={handleSend}
+                    onClick={inputValue.trim() ? handleSend : handleToggleRecording}
                     className="bg-hero-gradient hover:opacity-90 text-white shadow-medium"
                     size="icon"
-                    disabled={loading || isTyping || !inputValue.trim()}
+                    disabled={
+                      loading ||
+                      isTyping ||
+                      (isProcessingAudio && !inputValue.trim())
+                    }
+                    aria-label={
+                      inputValue.trim()
+                        ? "Отправить сообщение"
+                        : isRecording
+                          ? "Остановить запись"
+                          : isProcessingAudio
+                            ? "Обработка голосового сообщения"
+                            : "Начать запись голосового сообщения"
+                    }
                   >
-                    <Send className="w-5 h-5" />
+                    {inputValue.trim() ? (
+                      <Send className="w-5 h-5" />
+                    ) : isProcessingAudio ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : isRecording ? (
+                      <Square className="w-5 h-5" />
+                    ) : (
+                      <Mic className="w-5 h-5" />
+                    )}
                   </Button>
                 </div>
+                {(isRecording || isProcessingAudio || audioError) && (
+                  <div className="mt-3 text-xs text-muted-foreground flex items-center gap-2">
+                    {isRecording && <span className="text-red-500 font-medium">Идёт запись...</span>}
+                    {isProcessingAudio && <span>Обрабатываю голосовое сообщение...</span>}
+                    {audioError && <span className="text-destructive">{audioError}</span>}
+                  </div>
+                )}
               </div>
             </div>
           </Card>

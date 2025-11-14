@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { userService } from '@/services/database';
+import { userService, subscriptionService } from '@/services/database';
 
 interface User {
   id: string;
@@ -9,7 +9,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  subscription: any | null;
   isAuthenticated: boolean;
+  isPremium: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, name: string) => Promise<boolean>;
@@ -18,7 +20,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
+const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -26,12 +28,15 @@ export const useAuth = () => {
   return context;
 };
 
+export { useAuth };
+
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
+  const [subscription, setSubscription] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +50,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const dbUser = await userService.getUserByEmail(userData.email);
           if (dbUser) {
             setUser(dbUser);
+            // Load user subscription
+            const userSubscription = await subscriptionService.getUserSubscription(dbUser.id);
+            setSubscription(userSubscription);
           } else {
             localStorage.removeItem('auth_user');
           }
@@ -68,6 +76,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (dbUser) {
         setUser(dbUser);
         localStorage.setItem('auth_user', JSON.stringify(dbUser));
+        // Load user subscription
+        const userSubscription = await subscriptionService.getUserSubscription(dbUser.id);
+        setSubscription(userSubscription);
         return true;
       }
       return false;
@@ -89,6 +100,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const newUser = await userService.createUser(email, name);
       setUser(newUser);
       localStorage.setItem('auth_user', JSON.stringify(newUser));
+      // Load user subscription (new users start with free plan)
+      const userSubscription = await subscriptionService.getUserSubscription(newUser.id);
+      setSubscription(userSubscription);
       return true;
     } catch (error) {
       console.error('Registration error:', error);
@@ -98,12 +112,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = () => {
     setUser(null);
+    setSubscription(null);
     localStorage.removeItem('auth_user');
   };
 
   const value: AuthContextType = {
     user,
+    subscription,
     isAuthenticated: !!user,
+    isPremium: subscription?.plan === 'premium' && subscription?.status === 'active',
     loading,
     login,
     register,

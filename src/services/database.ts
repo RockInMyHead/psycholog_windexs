@@ -89,6 +89,19 @@ type StoredUserStats = {
   updatedAt: StoredDate;
 };
 
+type StoredSubscription = {
+  id: ID;
+  userId: ID;
+  plan: 'free' | 'premium';
+  status: 'active' | 'inactive' | 'cancelled';
+  yookassaPaymentId?: string;
+  startedAt: StoredDate;
+  expiresAt?: StoredDate;
+  autoRenew: boolean;
+  createdAt: StoredDate;
+  updatedAt: StoredDate;
+};
+
 type DataStore = {
   users: Record<ID, StoredUser>;
   chatSessions: Record<ID, StoredChatSession>;
@@ -166,6 +179,186 @@ const defaultQuoteSeed = [
     author: 'Оскар Уайльд',
     category: 'Мудрость',
   },
+  {
+    text: 'Тот, кто счастлив, хочет, чтобы все вокруг тоже были счастливы.',
+    author: 'Анна Франк',
+    category: 'Счастье',
+  },
+  {
+    text: 'Настоящая любовь — это не когда ты смотришь друг на друга, а когда вместе смотрите в одном направлении.',
+    author: 'Антуан де Сент-Экзюпери',
+    category: 'Любовь',
+  },
+  {
+    text: 'Каждый день — это новая возможность стать лучше.',
+    author: 'Аристотель',
+    category: 'Саморазвитие',
+  },
+  {
+    text: 'Ваше спокойствие ума — это ключ к успеху.',
+    author: 'Далай-лама',
+    category: 'Спокойствие',
+  },
+  {
+    text: 'Самый большой страх — это страх перед самим собой.',
+    author: 'Мишель Лабковский',
+    category: 'Страхи',
+  },
+  {
+    text: 'Прошлое нельзя изменить, но будущее можно создать.',
+    author: 'Мишель Лабковский',
+    category: 'Будущее',
+  },
+  {
+    text: 'Люди часто говорят о том, что хотят изменить свою жизнь, но редко меняют то, что делают каждый день.',
+    author: 'Мишель Лабковский',
+    category: 'Изменения',
+  },
+  {
+    text: 'Человек может все, если он достаточно хочет этого.',
+    author: 'Бенджамин Франклин',
+    category: 'Воля',
+  },
+  {
+    text: 'Секрет успеха в том, чтобы начать.',
+    author: 'Марк Твен',
+    category: 'Начало',
+  },
+  {
+    text: 'Не позволяйте тому, что вы не можете сделать, мешать тому, что вы можете сделать.',
+    author: 'Джон Вуден',
+    category: 'Возможности',
+  },
+  {
+    text: 'Жизнь слишком коротка, чтобы тратить ее на негатив.',
+    author: 'Карл Густав Юнг',
+    category: 'Позитив',
+  },
+  {
+    text: 'Истинное богатство — это не в том, что у вас есть, а в том, кого вы любите.',
+    author: 'Ричард Брэнсон',
+    category: 'Ценности',
+  },
+  {
+    text: 'Самое важное путешествие — это путешествие внутрь себя.',
+    author: 'Ральф Уолдо Эмерсон',
+    category: 'Самопознание',
+  },
+  {
+    text: 'Мир — это зеркало, и он отражает то, что внутри вас.',
+    author: 'Карл Густав Юнг',
+    category: 'Восприятие',
+  },
+  {
+    text: 'Когда одна дверь закрывается, другая открывается.',
+    author: 'Александр Грэм Белл',
+    category: 'Перемены',
+  },
+  {
+    text: 'Лучший способ предсказать будущее — это создать его.',
+    author: 'Питер Друкер',
+    category: 'Будущее',
+  },
+  {
+    text: 'Сила не в том, чтобы никогда не падать, а в том, чтобы каждый раз подниматься.',
+    author: 'Винс Ломбарди',
+    category: 'Стойкость',
+  },
+  {
+    text: 'Маленькие ежедневные улучшения — это ключ к большим изменениям.',
+    author: 'Джеймс Клир',
+    category: 'Привычки',
+  },
+  {
+    text: 'Дисциплина — это мост между целями и достижениями.',
+    author: 'Джим Рон',
+    category: 'Дисциплина',
+  },
+  {
+    text: 'Настоящее счастье приходит не от получения того, что хочешь, а от желания того, что имеешь.',
+    author: 'Шопенгауэр',
+    category: 'Благодарность',
+  },
+  {
+    text: 'Каждый человек несет в себе целый мир.',
+    author: 'Гёте',
+    category: 'Самоценность',
+  },
+  {
+    text: 'Жизнь — это не ожидание бури, а обучение танцевать под дождем.',
+    author: 'Вивьен Грин',
+    category: 'Адаптация',
+  },
+  {
+    text: 'Самый счастливый человек — тот, кто приносит счастье наибольшему количеству людей.',
+    author: 'Денис Дидро',
+    category: 'Альтруизм',
+  },
+  {
+    text: 'Ваш ум — как парашют: он работает только тогда, когда открыт.',
+    author: 'Фрэнк Зappa',
+    category: 'Открытость',
+  },
+  {
+    text: 'Никогда не поздно стать тем, кем вы могли бы быть.',
+    author: 'Джордж Элиот',
+    category: 'Потенциал',
+  },
+  {
+    text: 'Самое важное в общении — это умение слушать.',
+    author: 'Эрнест Хемингуэй',
+    category: 'Общение',
+  },
+  {
+    text: 'Творчество — это интеллект, который развлекается.',
+    author: 'Альберт Эйнштейн',
+    category: 'Творчество',
+  },
+  {
+    text: 'Свобода начинается с понимания, что вы несете ответственность за свои действия.',
+    author: 'Мишель Лабковский',
+    category: 'Свобода',
+  },
+  {
+    text: 'Каждый день — это новая страница в вашей истории.',
+    author: 'Пауло Коэльо',
+    category: 'Жизнь',
+  },
+  {
+    text: 'Истинная мудрость — в признании своего невежества.',
+    author: 'Сократ',
+    category: 'Мудрость',
+  },
+  {
+    text: 'Любовь к себе — это начало пожизненного романа.',
+    author: 'Оскар Уайльд',
+    category: 'Самолюбовь',
+  },
+  {
+    text: 'Будьте добры, потому что все, кого вы встречаете, ведут тяжелую борьбу.',
+    author: 'Платон',
+    category: 'Доброта',
+  },
+  {
+    text: 'Самый сильный — тот, кто умеет контролировать свои эмоции.',
+    author: 'Лао-цзы',
+    category: 'Эмоциональный интеллект',
+  },
+  {
+    text: 'Время — самый ценный ресурс. Не тратьте его на то, что не важно.',
+    author: 'Тим Феррис',
+    category: 'Время',
+  },
+  {
+    text: 'Страх — это всего лишь иллюзия. За ним всегда стоит выбор.',
+    author: 'Мишель Лабковский',
+    category: 'Страхи',
+  },
+  {
+    text: 'Истинный успех измеряется не тем, что вы достигли, а тем, чем вы стали.',
+    author: 'Зиг Зиглар',
+    category: 'Успех',
+  },
 ];
 
 function createDefaultStore(): DataStore {
@@ -190,6 +383,7 @@ function createDefaultStore(): DataStore {
     quotes,
     quoteViews: {},
     userStats: {},
+    subscriptions: {},
   };
 }
 
@@ -209,7 +403,32 @@ function loadStore(): DataStore {
   }
 
   try {
-    return JSON.parse(raw) as DataStore;
+    const store = JSON.parse(raw) as DataStore;
+
+    // Check if we need to update quotes with new ones
+    const existingQuoteCount = Object.keys(store.quotes).length;
+    const newQuoteCount = defaultQuoteSeed.length;
+
+    if (existingQuoteCount < newQuoteCount) {
+      console.log(`Updating quotes: ${existingQuoteCount} -> ${newQuoteCount}`);
+      const now = new Date().toISOString();
+
+      // Add new quotes to existing store
+      defaultQuoteSeed.forEach((quote, index) => {
+        const id = `quote_${index + 1}`;
+        if (!store.quotes[id]) {
+          store.quotes[id] = {
+            id,
+            ...quote,
+            createdAt: now,
+          };
+        }
+      });
+
+      saveStore(store);
+    }
+
+    return store;
   } catch (error) {
     console.error('Failed to parse stored data. Resetting store.', error);
     const store = createDefaultStore();
@@ -281,6 +500,13 @@ export type UserStat = Omit<StoredUserStats, 'lastActivity' | 'createdAt' | 'upd
   updatedAt: Date;
 };
 
+export type Subscription = Omit<StoredSubscription, 'startedAt' | 'expiresAt' | 'createdAt' | 'updatedAt'> & {
+  startedAt: Date;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 const convertUser = (user: StoredUser): User => ({
   ...user,
   createdAt: toDateRequired(user.createdAt),
@@ -327,6 +553,14 @@ const convertUserStats = (stats: StoredUserStats): UserStat => ({
   createdAt: toDateRequired(stats.createdAt),
   updatedAt: toDateRequired(stats.updatedAt),
   lastActivity: toDate(stats.lastActivity),
+});
+
+const convertSubscription = (subscription: StoredSubscription): Subscription => ({
+  ...subscription,
+  startedAt: toDateRequired(subscription.startedAt),
+  expiresAt: toDate(subscription.expiresAt),
+  createdAt: toDateRequired(subscription.createdAt),
+  updatedAt: toDateRequired(subscription.updatedAt),
 });
 
 async function refreshUserStats(userId: ID) {
@@ -802,5 +1036,100 @@ export const userStatsService = {
     }
 
     return convertUserStats(stats);
+  },
+};
+
+export const subscriptionService = {
+  async getUserSubscription(userId: ID): Promise<Subscription | undefined> {
+    await delay();
+    const store = loadStore();
+    if (!store.subscriptions) {
+      return undefined;
+    }
+    const subscriptions = Object.values(store.subscriptions)
+      .filter(sub => sub.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    return subscriptions[0] ? convertSubscription(subscriptions[0]) : undefined;
+  },
+
+  async createSubscription(
+    userId: ID,
+    plan: 'free' | 'premium',
+    yookassaPaymentId?: string
+  ): Promise<Subscription> {
+    await delay();
+    const store = loadStore();
+
+    // Initialize subscriptions if it doesn't exist
+    if (!store.subscriptions) {
+      store.subscriptions = {};
+    }
+
+    const id = generateId('subscription');
+    const now = new Date().toISOString();
+    const expiresAt = plan === 'premium' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : undefined;
+
+    const subscription: StoredSubscription = {
+      id,
+      userId,
+      plan,
+      status: 'active',
+      yookassaPaymentId,
+      startedAt: now,
+      expiresAt,
+      autoRenew: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    store.subscriptions[id] = subscription;
+    saveStore(store);
+
+    await refreshUserStats(userId);
+
+    return convertSubscription(subscription);
+  },
+
+  async updateSubscriptionStatus(
+    subscriptionId: ID,
+    status: 'active' | 'inactive' | 'cancelled'
+  ): Promise<Subscription | undefined> {
+    await delay();
+    const store = loadStore();
+    if (!store.subscriptions) {
+      return undefined;
+    }
+    const subscription = store.subscriptions[subscriptionId];
+
+    if (!subscription) {
+      return undefined;
+    }
+
+    subscription.status = status;
+    subscription.updatedAt = new Date().toISOString();
+
+    store.subscriptions[subscriptionId] = subscription;
+    saveStore(store);
+
+    await refreshUserStats(subscription.userId);
+
+    return convertSubscription(subscription);
+  },
+
+  async cancelSubscription(subscriptionId: ID): Promise<Subscription | undefined> {
+    return await subscriptionService.updateSubscriptionStatus(subscriptionId, 'cancelled');
+  },
+
+  async getUserSubscriptions(userId: ID): Promise<Subscription[]> {
+    await delay();
+    const store = loadStore();
+    if (!store.subscriptions) {
+      return [];
+    }
+    return Object.values(store.subscriptions)
+      .filter(sub => sub.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(convertSubscription);
   },
 };

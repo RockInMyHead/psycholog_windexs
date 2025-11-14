@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import { userService, audioCallService, chatService } from "@/services/database";
+import { userService, audioCallService } from "@/services/database";
 import { useAuth } from "@/contexts/AuthContext";
+import { psychologistAI, type ChatMessage } from "@/services/openai";
 
 const AudioCall = () => {
   const { user: authUser } = useAuth();
@@ -14,7 +15,316 @@ const AudioCall = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [user, setUser] = useState<UserType | null>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
+  const [transcriptionStatus, setTranscriptionStatus] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const callTimerRef = useRef<number | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const recognitionActiveRef = useRef(false);
+  const isMutedRef = useRef(false);
+  const isSpeakerOnRef = useRef(true);
+  const conversationRef = useRef<ChatMessage[]>([]);
+  const responseQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const audioQueueRef = useRef<ArrayBuffer[]>([]);
+  const isPlayingAudioRef = useRef(false);
+  const processingSoundIntervalRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const speakerGainRef = useRef<GainNode | null>(null);
+  const backgroundMusicRef = useRef<{
+    audioElement?: HTMLAudioElement;
+    isPlaying: boolean;
+  }>({ isPlaying: false });
+
+  const initializeAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    if (!speakerGainRef.current && audioContextRef.current) {
+      const gainNode = audioContextRef.current.createGain();
+      gainNode.gain.value = isSpeakerOnRef.current ? 1 : 0;
+      gainNode.connect(audioContextRef.current.destination);
+      speakerGainRef.current = gainNode;
+    }
+    return audioContextRef.current;
+  };
+
+  const getAudioOutputNode = () => {
+    const audioContext = initializeAudioContext();
+    if (!audioContext) {
+      return null;
+    }
+    if (!speakerGainRef.current) {
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = isSpeakerOnRef.current ? 1 : 0;
+      gainNode.connect(audioContext.destination);
+      speakerGainRef.current = gainNode;
+    }
+    return speakerGainRef.current;
+  };
+
+  const playBeepSound = async (frequency: number = 800, duration: number = 200) => {
+    try {
+      const audioContext = initializeAudioContext();
+      const outputNode = getAudioOutputNode();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(outputNode ?? audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + duration / 1000);
+    } catch (error) {
+      console.warn('Could not play beep sound:', error);
+    }
+  };
+
+  const startProcessingSound = () => {
+    if (processingSoundIntervalRef.current) {
+      clearInterval(processingSoundIntervalRef.current);
+    }
+
+    // Первый сигнал сразу
+    playBeepSound(800, 150);
+
+    // Затем повторять каждые 3 секунды
+    processingSoundIntervalRef.current = window.setInterval(() => {
+      playBeepSound(800, 150);
+    }, 3000);
+  };
+
+  const stopProcessingSound = () => {
+    if (processingSoundIntervalRef.current) {
+      clearInterval(processingSoundIntervalRef.current);
+      processingSoundIntervalRef.current = null;
+    }
+  };
+
+  const startBackgroundMusic = async () => {
+    if (backgroundMusicRef.current.isPlaying) {
+      return; // Уже играет
+    }
+
+    try {
+      const audioElement = new Audio('/de144d31b1f3b3f.mp3');
+
+      // Настраиваем аудио
+      audioElement.loop = true; // Зацикливаем музыку
+      audioElement.volume = 0.1; // Тихая громкость (10%)
+      audioElement.muted = !isSpeakerOnRef.current;
+      audioElement.preload = 'auto';
+
+      // Обработчики событий
+      audioElement.addEventListener('canplaythrough', () => {
+        audioElement.play().catch(error => {
+          console.warn('Could not play background music:', error);
+        });
+      });
+
+      audioElement.addEventListener('error', (error) => {
+        console.warn('Background music loading error:', error);
+      });
+
+      backgroundMusicRef.current = {
+        audioElement,
+        isPlaying: true,
+      };
+
+    } catch (error) {
+      console.warn('Could not start background music:', error);
+    }
+  };
+
+  const stopBackgroundMusic = () => {
+    if (!backgroundMusicRef.current.isPlaying) {
+      return;
+    }
+
+    try {
+      const { audioElement } = backgroundMusicRef.current;
+
+      if (audioElement) {
+        // Плавное затухание
+        const fadeOut = () => {
+          if (audioElement.volume > 0.01) {
+            audioElement.volume -= 0.01;
+            setTimeout(fadeOut, 50);
+          } else {
+            audioElement.pause();
+            audioElement.currentTime = 0;
+            backgroundMusicRef.current.isPlaying = false;
+          }
+        };
+        fadeOut();
+      } else {
+        backgroundMusicRef.current.isPlaying = false;
+      }
+
+    } catch (error) {
+      console.warn('Could not stop background music:', error);
+      backgroundMusicRef.current.isPlaying = false;
+    }
+  };
+
+  const splitIntoSentences = (text: string): string[] => {
+    return text
+      .split(/(?<=[.!?])\s+/u)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length > 0);
+  };
+
+  const resetAudioPlayback = () => {
+    audioQueueRef.current = [];
+    isPlayingAudioRef.current = false;
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch((error) => {
+        console.warn("Error closing AudioContext:", error);
+      });
+      audioContextRef.current = null;
+    }
+    speakerGainRef.current = null;
+  };
+
+  const playQueuedAudio = async () => {
+    if (isPlayingAudioRef.current || audioQueueRef.current.length === 0) {
+      return;
+    }
+
+    if (!audioContextRef.current) {
+      const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext;
+      audioContextRef.current = new AudioContextConstructor();
+    }
+
+    const audioContext = audioContextRef.current;
+    if (!audioContext) {
+      console.warn("AudioContext unavailable.");
+      audioQueueRef.current = [];
+      return;
+    }
+
+    const outputNode = getAudioOutputNode();
+
+    isPlayingAudioRef.current = true;
+
+    try {
+      while (audioQueueRef.current.length > 0) {
+        const buffer = audioQueueRef.current.shift();
+        if (!buffer) continue;
+
+        const decoded = await audioContext.decodeAudioData(buffer.slice(0));
+
+        await new Promise<void>((resolve) => {
+          const source = audioContext.createBufferSource();
+          source.buffer = decoded;
+          source.connect(outputNode ?? audioContext.destination);
+          source.onended = () => resolve();
+          source.start(0);
+        });
+      }
+    } catch (error) {
+      console.error("Error during audio playback:", error);
+    } finally {
+      isPlayingAudioRef.current = false;
+    }
+  };
+
+  const enqueueSpeechPlayback = async (text: string) => {
+    const sentences = splitIntoSentences(text);
+    if (sentences.length === 0) {
+      return;
+    }
+
+    try {
+      const audioBuffers = await Promise.all(
+        sentences.map((sentence) => psychologistAI.synthesizeSpeech(sentence))
+      );
+      audioQueueRef.current.push(...audioBuffers);
+      void playQueuedAudio();
+    } catch (error) {
+      console.error("Error synthesizing speech:", error);
+      setAudioError("Не удалось озвучить ответ. Попробуйте ещё раз.");
+    }
+  };
+
+  const stopRecognition = () => {
+    recognitionActiveRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.warn("Error stopping speech recognition:", error);
+      }
+      recognitionRef.current = null;
+    }
+  };
+
+  const cleanupRecording = () => {
+    stopRecognition();
+    resetAudioPlayback();
+    conversationRef.current = [];
+    responseQueueRef.current = Promise.resolve();
+
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+
+    setTranscriptionStatus(null);
+  };
+
+  const processRecognizedText = async (rawText: string) => {
+    if (!user) {
+      return;
+    }
+
+    const text = rawText.trim();
+    if (!text) {
+      console.info("[AudioCall] Распознанный текст пустой — возможно, тишина или неразборчивая речь.");
+      return;
+    }
+
+    console.info("[AudioCall] Распознанный текст пользователя:", text);
+    setTranscriptionStatus("Марк обдумывает ответ...");
+
+    conversationRef.current.push({ role: "user", content: text });
+
+    try {
+      // Начинаем звуковые сигналы во время генерации ответа
+      startProcessingSound();
+
+      const assistantReply = await psychologistAI.getVoiceResponse(conversationRef.current);
+      conversationRef.current.push({ role: "assistant", content: assistantReply });
+
+      // Останавливаем сигналы и начинаем TTS
+      stopProcessingSound();
+      setTranscriptionStatus("Озвучиваю ответ...");
+
+      await enqueueSpeechPlayback(assistantReply);
+      setTranscriptionStatus("");
+    } catch (error) {
+      console.error("Error generating assistant response:", error);
+      stopProcessingSound(); // Останавливаем сигналы при ошибке
+      setAudioError("Не удалось озвучить ответ. Попробуйте ещё раз.");
+      setTranscriptionStatus("");
+    }
+  };
+
+  const handleRecognizedText = (rawText: string) => {
+    responseQueueRef.current = responseQueueRef.current
+      .catch((error) => console.error("Previous voice response error:", error))
+      .then(() => processRecognizedText(rawText));
+  };
 
   // Default user ID for demo purposes
   const defaultUserId = 'user@zenmindmate.com';
@@ -22,6 +332,69 @@ const AudioCall = () => {
   useEffect(() => {
     initializeUser();
   }, [authUser]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+
+    const stream = audioStreamRef.current;
+    if (!stream) {
+      if (isMuted) {
+        setTranscriptionStatus("Микрофон выключен");
+      }
+      return;
+    }
+
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = !isMuted;
+    });
+
+    if (isMuted) {
+      setTranscriptionStatus("Микрофон выключен");
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.warn("Ошибка при остановке распознавания:", error);
+        }
+      }
+    } else if (recognitionActiveRef.current && recognitionRef.current) {
+      setTranscriptionStatus("");
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        // Распознавание могло уже работать – игнорируем ошибку состояния
+        if (error instanceof DOMException && error.name === "InvalidStateError") {
+          return;
+        }
+        console.warn("Не удалось возобновить распознавание речи:", error);
+      }
+    }
+  }, [isMuted]);
+
+  useEffect(() => {
+    isSpeakerOnRef.current = isSpeakerOn;
+
+    if (speakerGainRef.current && audioContextRef.current) {
+      const gain = speakerGainRef.current.gain;
+      gain.setValueAtTime(isSpeakerOn ? 1 : 0, audioContextRef.current.currentTime ?? 0);
+    }
+
+    if (backgroundMusicRef.current.audioElement) {
+      backgroundMusicRef.current.audioElement.muted = !isSpeakerOn;
+    }
+  }, [isSpeakerOn]);
+
+  useEffect(() => {
+    return () => {
+      cleanupRecording();
+      stopProcessingSound(); // Останавливаем звуковые сигналы при размонтировании
+      // Останавливаем фоновую музыку при размонтировании
+      stopBackgroundMusic();
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+      }
+    };
+  }, []);
 
   const initializeUser = async () => {
     try {
@@ -35,40 +408,150 @@ const AudioCall = () => {
   };
 
   const startCall = async () => {
-    if (!user) return;
+    if (!user || isCallActive) {
+      return;
+    }
+
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setAudioError("Ваш браузер не поддерживает запись аудио.");
+      return;
+    }
 
     try {
-      // Create audio call record in database
+      setAudioError(null);
+      setIsMuted(false);
+      isMutedRef.current = false;
+      setIsSpeakerOn(true);
+      setCallDuration(0);
+      conversationRef.current = [];
+      responseQueueRef.current = Promise.resolve();
+
+      const SpeechRecognitionConstructor =
+        typeof window !== "undefined"
+          ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+          : null;
+
+      if (!SpeechRecognitionConstructor) {
+        setAudioError("Ваш браузер не поддерживает системное распознавание речи.");
+        return;
+      }
+
       const call = await audioCallService.createAudioCall(user.id);
       setCurrentCallId(call.id);
 
-      setIsCallActive(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
 
-      // Start call duration counter
-      const interval = setInterval(() => {
+      const recognition = new SpeechRecognitionConstructor();
+      recognition.lang = "ru-RU";
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event: any) => {
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const result = event.results[i];
+          const transcript = result?.[0]?.transcript ?? "";
+          if (result.isFinal && transcript) {
+            handleRecognizedText(transcript);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error:", event);
+        if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
+          setAudioError("Доступ к микрофону запрещён. Проверьте настройки браузера.");
+        } else if (event?.error !== "aborted") {
+          setAudioError("Ошибка распознавания речи. Попробуйте ещё раз.");
+        }
+      };
+
+      recognition.onend = () => {
+        if (!recognitionActiveRef.current) {
+          return;
+        }
+
+        if (isMutedRef.current) {
+          setTranscriptionStatus("Микрофон выключен");
+          return;
+        }
+
+        try {
+          recognition.start();
+        } catch (error) {
+          console.warn("Не удалось перезапустить распознавание речи:", error);
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognitionActiveRef.current = true;
+
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error("Failed to start speech recognition:", error);
+        setAudioError("Не удалось запустить распознавание речи.");
+        stopRecognition();
+        cleanupRecording();
+        await audioCallService.endAudioCall(call.id, 0);
+        setCurrentCallId(null);
+        return;
+      }
+
+      const greeting = "Здравствуйте. Я Марк, психолог. Расскажите, что вас сейчас больше всего беспокоит?";
+      conversationRef.current.push({ role: "assistant", content: greeting });
+      setTranscriptionStatus("Озвучиваю ответ...");
+      await enqueueSpeechPlayback(greeting);
+
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+      }
+
+      callTimerRef.current = window.setInterval(() => {
         setCallDuration((prev) => prev + 1);
       }, 1000);
 
-      // Store interval ID for cleanup
-      return () => clearInterval(interval);
+      setTranscriptionStatus("");
+      setIsCallActive(true);
+
+      // Запускаем фоновую музыку из файла
+      startBackgroundMusic();
     } catch (error) {
-      console.error('Error starting call:', error);
+      console.error("Error starting call:", error);
+      setAudioError("Не удалось получить доступ к микрофону. Проверьте настройки и попробуйте снова.");
+      cleanupRecording();
+      setCurrentCallId(null);
     }
   };
 
   const endCall = async () => {
-    if (!currentCallId) return;
+    if (!currentCallId) {
+      return;
+    }
 
     try {
-      // Update call record with duration
-      await audioCallService.endAudioCall(currentCallId, callDuration);
+      cleanupRecording();
+      stopProcessingSound(); // Останавливаем звуковые сигналы
 
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+
+      await audioCallService.endAudioCall(currentCallId, callDuration);
+    } catch (error) {
+      console.error("Error ending call:", error);
+      setAudioError("Не удалось корректно завершить звонок.");
+    } finally {
+      // Останавливаем фоновую музыку
+      stopBackgroundMusic();
       setIsCallActive(false);
       setCallDuration(0);
       setIsMuted(false);
+      isMutedRef.current = false;
       setCurrentCallId(null);
-    } catch (error) {
-      console.error('Error ending call:', error);
+      setTranscriptionStatus(null);
     }
   };
 
@@ -170,10 +653,16 @@ const AudioCall = () => {
                 </div>
 
                 <p className="text-muted-foreground text-sm">
-                  {isMuted && "Микрофон выключен • "}
-                  {!isSpeakerOn && "Звук выключен • "}
-                  Нажмите красную кнопку для завершения звонка
+                  {!isSpeakerOn && "Звук выключен"}
                 </p>
+
+                {transcriptionStatus && (
+                  <p className="text-sm text-primary/80">{transcriptionStatus}</p>
+                )}
+
+                {audioError && (
+                  <p className="text-sm text-destructive">{audioError}</p>
+                )}
               </div>
             )}
           </Card>

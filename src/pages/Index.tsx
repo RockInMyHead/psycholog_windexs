@@ -84,23 +84,6 @@ const Index = () => {
     { number: "24/7", label: "Поддержка", icon: Clock }
   ];
 
-  const testimonials = [
-    {
-      name: "Мария К.",
-      text: "Windexs-Психолог помог мне справиться с тревожностью. Теперь я чувствую себя намного спокойнее и увереннее.",
-      rating: 5
-    },
-    {
-      name: "Алексей В.",
-      text: "Медитации и чат с психологом стали частью моей ежедневной рутины. Рекомендую всем!",
-      rating: 5
-    },
-    {
-      name: "Елена С.",
-      text: "Удобно, что можно обратиться в любое время. Качество поддержки на высшем уровне.",
-      rating: 5
-    }
-  ];
 
   const steps = [
     {
@@ -167,13 +150,13 @@ const Index = () => {
             </div>
 
             {/* Stats Section */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <div className="grid grid-cols-1 gap-6 mt-16 animate-fade-in max-w-md mx-auto" style={{ animationDelay: '200ms' }}>
               {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
                   <Card key={index} className="p-6 bg-card-gradient border-2 border-border shadow-soft hover:shadow-medium transition-all">
-                    <Icon className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">{stat.number}</div>
+                    <Icon className="w-7 h-7 text-primary mx-auto mb-3" />
+                    <div className="text-2xl md:text-3xl font-bold text-foreground mb-2">{stat.number}</div>
                     <div className="text-sm text-muted-foreground">{stat.label}</div>
                   </Card>
                 );
@@ -308,47 +291,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-              Отзывы наших пользователей
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Узнайте, что говорят люди о Windexs-Психолог
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card
-                key={index}
-                className="p-8 bg-card-gradient border-2 border-border shadow-soft hover:shadow-medium transition-all animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-foreground text-lg mb-6 italic leading-relaxed">
-                  "{testimonial.text}"
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-hero-gradient flex items-center justify-center shadow-medium">
-                    <span className="text-white font-bold">{testimonial.name.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <div className="font-bold text-foreground">{testimonial.name}</div>
-                    <div className="text-sm text-muted-foreground">Пользователь</div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Why AI Psychology */}
       <section className="py-20 px-4 bg-background/50">
@@ -385,27 +327,27 @@ const Index = () => {
             </div>
 
             <div className="relative animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <Card className="p-8 bg-card-gradient border-2 border-primary/20 shadow-strong">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-emerald-400/10 to-teal-500/10 border border-primary/20">
-                    <Brain className="w-12 h-12 text-primary mx-auto mb-3" />
-                    <div className="text-3xl font-bold text-foreground mb-2">98%</div>
-                    <div className="text-sm text-muted-foreground">Точность анализа</div>
+              <Card className="p-4 sm:p-8 bg-card-gradient border-2 border-primary/20 shadow-strong">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                  <div className="text-center p-4 sm:p-6 rounded-xl bg-gradient-to-br from-emerald-400/10 to-teal-500/10 border border-primary/20">
+                    <Brain className="w-8 h-8 sm:w-12 sm:h-12 text-primary mx-auto mb-2 sm:mb-3" />
+                    <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">98%</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground break-words">Точность анализа</div>
                   </div>
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-teal-400/10 to-cyan-500/10 border border-primary/20">
-                    <Zap className="w-12 h-12 text-accent mx-auto mb-3" />
-                    <div className="text-3xl font-bold text-foreground mb-2">&lt;1с</div>
-                    <div className="text-sm text-muted-foreground">Время отклика</div>
+                  <div className="text-center p-4 sm:p-6 rounded-xl bg-gradient-to-br from-teal-400/10 to-cyan-500/10 border border-primary/20">
+                    <Zap className="w-8 h-8 sm:w-12 sm:h-12 text-accent mx-auto mb-2 sm:mb-3" />
+                    <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">&lt;1с</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground break-words">Время отклика</div>
                   </div>
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-green-400/10 to-emerald-500/10 border border-primary/20">
-                    <Heart className="w-12 h-12 text-primary mx-auto mb-3" />
-                    <div className="text-3xl font-bold text-foreground mb-2">95%</div>
-                    <div className="text-sm text-muted-foreground">Удовлетворенность</div>
+                  <div className="text-center p-4 sm:p-6 rounded-xl bg-gradient-to-br from-green-400/10 to-emerald-500/10 border border-primary/20">
+                    <Heart className="w-8 h-8 sm:w-12 sm:h-12 text-primary mx-auto mb-2 sm:mb-3" />
+                    <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">95%</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground break-words">Удовлетворенность</div>
                   </div>
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-lime-400/10 to-green-500/10 border border-primary/20">
-                    <Shield className="w-12 h-12 text-accent mx-auto mb-3" />
-                    <div className="text-3xl font-bold text-foreground mb-2">100%</div>
-                    <div className="text-sm text-muted-foreground">Конфиденциальность</div>
+                  <div className="text-center p-4 sm:p-6 rounded-xl bg-gradient-to-br from-lime-400/10 to-green-500/10 border border-primary/20">
+                    <Shield className="w-8 h-8 sm:w-12 sm:h-12 text-accent mx-auto mb-2 sm:mb-3" />
+                    <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">100%</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground break-words">Конфиденциальность</div>
                   </div>
                 </div>
               </Card>
@@ -428,14 +370,9 @@ const Index = () => {
                 Присоединяйтесь к тысячам людей, которые уже нашли поддержку и 
                 начали путь к психологическому благополучию
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/profile">
-                  <Button size="lg" variant="secondary" className="text-lg px-10 py-7 bg-white text-primary hover:bg-white/90 shadow-medium">
-                    Создать профиль
-                  </Button>
-                </Link>
+              <div className="flex justify-center">
                 <Link to="/chat">
-                  <Button size="lg" variant="outline" className="text-lg px-10 py-7 border-2 border-white text-white hover:bg-white/10">
+                  <Button size="lg" variant="outline" className="text-lg px-10 py-7 text-foreground hover:bg-green-50 hover:text-green-600">
                     Начать сейчас
                   </Button>
                 </Link>
