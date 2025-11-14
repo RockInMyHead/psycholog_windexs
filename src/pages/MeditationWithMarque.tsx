@@ -722,7 +722,7 @@ const MeditationWithMarque = () => {
       const interval = window.setInterval(() => {
         console.log("📸 PHOTO INTERVAL TICK - calling captureAndAnalyzePose");
         captureAndAnalyzePose();
-      }, 5000);
+      }, 30000);
 
       return () => {
         console.log("📸 CLEARING PHOTO INTERVAL");
