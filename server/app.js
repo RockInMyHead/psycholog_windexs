@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3001;
 
 // Enable CORS
 app.use(cors({
-  origin: ['http://localhost:8080', 'https://psycholog.windexs.ru', 'http://psycholog.windexs.ru'],
+  origin: ['https://psycholog.windexs.ru', 'http://psycholog.windexs.ru'],
   credentials: true
 }));
 
