@@ -333,10 +333,17 @@ const MeditationWithMarque = () => {
     }
 
     console.log("✅ Starting pose capture...");
+    console.log("📹 Video element state:", {
+      videoWidth: videoRef.current.videoWidth,
+      videoHeight: videoRef.current.videoHeight,
+      readyState: videoRef.current.readyState,
+      networkState: videoRef.current.networkState
+    });
 
     try {
       const context = canvasRef.current.getContext("2d");
       if (!context) {
+        console.log("❌ Canvas context error");
         return;
       }
 
@@ -344,11 +351,14 @@ const MeditationWithMarque = () => {
       canvasRef.current.height = videoRef.current.videoHeight;
 
       if (canvasRef.current.width === 0 || canvasRef.current.height === 0) {
+        console.log("❌ Canvas size is 0 - video not ready");
         return;
       }
 
+      console.log("✅ Drawing image to canvas");
       context.drawImage(videoRef.current, 0, 0);
       const imageData = canvasRef.current.toDataURL("image/jpeg");
+      console.log("✅ Image captured, size:", imageData.length, "bytes");
 
       // Отправляем фото в OpenAI для анализа позы
       const analysis = await analyzeUserPose(imageData);
@@ -381,8 +391,10 @@ const MeditationWithMarque = () => {
   // Analyze pose with OpenAI Vision
   const analyzeUserPose = async (imageBase64: string): Promise<PoseAnalysisResult> => {
     try {
+      console.log("🔍 Analyzing pose with OpenAI...");
       // Извлекаем base64 без префикса data:image
       const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+      console.log("🔍 Base64 data prepared, length:", base64Data.length);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -431,12 +443,15 @@ const MeditationWithMarque = () => {
       }
 
       const content = completion.choices[0].message.content || "";
+      console.log("🔍 OpenAI response:", content);
 
       try {
         // Пытаемся распарсить JSON из ответа
         const jsonMatch = content.match(/\{[^{}]*\}/);
         if (jsonMatch) {
+          console.log("✅ JSON found in response");
           const parsed = JSON.parse(jsonMatch[0]);
+          console.log("✅ Pose analysis result:", parsed);
           return {
             isCorrect: parsed.isCorrect !== false,
             feedback: parsed.feedback || "Поза выглядит хорошо",
@@ -445,6 +460,7 @@ const MeditationWithMarque = () => {
 
         // Если не нашли JSON, попробуем извлечь информацию из текста
         // По умолчанию считаем позу хорошей, если нет явных проблем
+        console.log("⚠️ No JSON found, parsing text response");
         const hasProblems = content.toLowerCase().includes('выпрямите') ||
                            content.toLowerCase().includes('расслабьте') ||
                            content.toLowerCase().includes('голову') ||
@@ -459,6 +475,7 @@ const MeditationWithMarque = () => {
         };
 
       } catch (parseError) {
+        console.error("❌ Error parsing pose response:", parseError);
         // При ошибке парсинга считаем позу хорошей
         return {
           isCorrect: true,
@@ -569,7 +586,7 @@ const MeditationWithMarque = () => {
 
       await speakText(greeting);
 
-      // Фото каждые 30 секунд для анализа позы (только для йога-медитации)
+      // Фото каждые 5 секунд для отладки (позже будет 30)
       photoIntervalRef.current = window.setInterval(() => {
         console.log("📸 PHOTO INTERVAL tick - meditation:", selectedMeditation?.id, "active:", isSessionActive, "step:", step);
         if (selectedMeditation.id === "yoga_meditation" && isSessionActive) {
@@ -582,7 +599,7 @@ const MeditationWithMarque = () => {
             step: step
           });
         }
-      }, 30000);
+      }, 5000);
     } else {
       // Regular meditation - start with first guidance
       setMeditationGuidanceStep(0);
