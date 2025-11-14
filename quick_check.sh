@@ -37,3 +37,4 @@ echo ""
 echo "💡 Если проблемы остались - проверьте логи:"
 echo "   sudo journalctl -u psycholog-api -f  # Express логи"
 echo "   sudo nginx -t && sudo systemctl reload nginx  # Nginx проверка"
+EOF && chmod +x quick_check.sh

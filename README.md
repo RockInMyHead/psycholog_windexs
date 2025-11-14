@@ -66,7 +66,7 @@ ENABLE_MOCK_API=false
 ```bash
 npm run dev
 ```
-Приложение будет доступно на `http://localhost:8080` (для локальной разработки)
+Приложение будет доступно на `http://localhost:8080` (разработка)
 
 #### Development режим с прокси-сервером
 ```bash
@@ -115,13 +115,19 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Прокси для API
+    # Прокси для API (Express сервер на localhost:3002)
     location /api {
         proxy_pass http://localhost:3002;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    # Альтернатива: если API на другом сервере
+    # location /api {
+    #     proxy_pass https://psycholog.windexs.ru:3002;
+    # }
 
     # SSL настройки (добавьте свои сертификаты)
     ssl_certificate /path/to/cert.pem;
