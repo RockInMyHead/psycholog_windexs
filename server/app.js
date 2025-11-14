@@ -8,15 +8,15 @@ const PORT = process.env.PORT || 3001;
 
 // Enable CORS
 app.use(cors({
-  origin: ['https://psycholog.windexs.ru'],
+  origin: ['https://psycholog.windexs.ru', 'http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true
 }));
 
 // Proxy configuration
-const proxyHost = process.env.REACT_APP_PROXY_HOST || '185.68.187.20';
-const proxyPort = process.env.REACT_APP_PROXY_PORT || '8000';
-const proxyUsername = process.env.REACT_APP_PROXY_USERNAME || 'rBD9e6';
-const proxyPassword = process.env.REACT_APP_PROXY_PASSWORD || 'jZdUnJ';
+const proxyHost = process.env.REACT_APP_PROXY_HOST || process.env.PROXY_HOST || '185.68.187.20';
+const proxyPort = process.env.REACT_APP_PROXY_PORT || process.env.PROXY_PORT || '8000';
+const proxyUsername = process.env.REACT_APP_PROXY_USERNAME || process.env.PROXY_USERNAME || 'rBD9e6';
+const proxyPassword = process.env.REACT_APP_PROXY_PASSWORD || process.env.PROXY_PASSWORD || 'jZdUnJ';
 
 const proxyUrl = `http://${proxyUsername}:${proxyPassword}@${proxyHost}:${proxyPort}`;
 const agent = new HttpsProxyAgent(proxyUrl);
