@@ -585,21 +585,6 @@ const MeditationWithMarque = () => {
       ];
 
       await speakText(greeting);
-
-      // Фото каждые 5 секунд для отладки (позже будет 30)
-      photoIntervalRef.current = window.setInterval(() => {
-        console.log("📸 PHOTO INTERVAL tick - meditation:", selectedMeditation?.id, "active:", isSessionActive, "step:", step);
-        if (selectedMeditation.id === "yoga_meditation" && isSessionActive) {
-          console.log("🚀 Calling captureAndAnalyzePose");
-          captureAndAnalyzePose();
-        } else {
-          console.log("⏸️ Skipping pose analysis - conditions not met", {
-            isYoga: selectedMeditation.id === "yoga_meditation",
-            isActive: isSessionActive,
-            step: step
-          });
-        }
-      }, 5000);
     } else {
       // Regular meditation - start with first guidance
       setMeditationGuidanceStep(0);
@@ -729,6 +714,22 @@ const MeditationWithMarque = () => {
       changeYogaPose();
     }
   }, [selectedYogaPoses, step, currentYogaPose, isSessionActive]);
+
+  // Photo interval for pose analysis
+  useEffect(() => {
+    if (selectedMeditation?.id === "yoga_meditation" && isSessionActive && step === "meditating") {
+      console.log("📸 SETTING UP PHOTO INTERVAL - meditation is active");
+      const interval = window.setInterval(() => {
+        console.log("📸 PHOTO INTERVAL TICK - calling captureAndAnalyzePose");
+        captureAndAnalyzePose();
+      }, 5000);
+
+      return () => {
+        console.log("📸 CLEARING PHOTO INTERVAL");
+        clearInterval(interval);
+      };
+    }
+  }, [selectedMeditation, isSessionActive, step]);
 
   // Cleanup intervals on unmount
   useEffect(() => {
