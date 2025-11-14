@@ -23,7 +23,7 @@ const MeditationWithMarque = () => {
   const { user: authUser } = useAuth();
 
   // States
-  const [step, setStep] = useState<"select_meditation" | "select_time" | "meditating">("select_meditation");
+  const [step, setStep] = useState<"select_meditation" | "select_time" | "select_poses" | "meditating">("select_meditation");
   const [selectedMeditation, setSelectedMeditation] = useState<MeditationType | null>(null);
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -45,10 +45,23 @@ const MeditationWithMarque = () => {
   ];
 
   const getRandomQuote = () => wiseQuotes[Math.floor(Math.random() * wiseQuotes.length)];
+
+  // Toggle pose selection
+  const togglePoseSelection = (pose: any) => {
+    setUserSelectedPoses(prev => {
+      const isSelected = prev.some(p => p.id === pose.id);
+      if (isSelected) {
+        return prev.filter(p => p.id !== pose.id);
+      } else {
+        return [...prev, pose];
+      }
+    });
+  };
   const [poseResult, setPoseResult] = useState<PoseAnalysisResult | null>(null);
   const [currentYogaPose, setCurrentYogaPose] = useState<any>(null);
   const [poseStartTime, setPoseStartTime] = useState(0);
   const [selectedYogaPoses, setSelectedYogaPoses] = useState<any[]>([]);
+  const [userSelectedPoses, setUserSelectedPoses] = useState<any[]>([]);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -519,7 +532,7 @@ const MeditationWithMarque = () => {
     lastPoseFeedbackRef.current = 0;
 
     // Announce pose change
-    const poseDuration = nextPose.planDuration || nextPose.duration;
+    const poseDuration = nextPose.duration;
     const announcement = `Переходим к позе ${nextPose.name}. ${nextPose.instructions}. Удерживайте позу ${poseDuration} минут${poseDuration !== 1 ? '' : 'у'}.`;
     await speakText(announcement);
 
@@ -545,23 +558,10 @@ const MeditationWithMarque = () => {
     if (selectedMeditation.id === "yoga_meditation") {
       await startWebcam();
 
-      // Apply the meditation plan based on selected time
-      const plan = yogaMeditationPlans[selectedTime as keyof typeof yogaMeditationPlans];
-
-      if (plan) {
-        const posesWithDuration = plan.map(step => {
-          const pose = yogaPoses.find(p => p.id === step.poseId);
-          return pose ? { ...pose, planDuration: step.duration } : null;
-        }).filter(Boolean);
-
-        setSelectedYogaPoses(posesWithDuration);
-        console.log("🧘 YOGA POSES SET:", posesWithDuration.length, "poses");
-
-        // First pose will be started automatically via useEffect when poses are loaded
-      }
+      // selectedYogaPoses already set from user selection, no need to apply plan
 
       // Initial greeting for yoga
-      const greeting = `Начинаем йога-медитацию на ${selectedTime} минут. Я проведу вас через ${plan ? plan.length : 0} поз${plan && plan.length > 1 ? 'ы' : 'у'}. Сосредоточьтесь на дыхании и наслаждайтесь практикой.`;
+      const greeting = `Начинаем йога-медитацию на ${selectedTime} минут. Я проведу вас через ${selectedYogaPoses.length} поз${selectedYogaPoses.length > 1 ? 'ы' : 'у'}. Сосредоточьтесь на дыхании и наслаждайтесь практикой.`;
       conversationRef.current = [
         { role: "system", content: "Ты инструктор йога-медитации. Помогаешь правильно выполнять позы и следить за качеством." },
         { role: "assistant", content: greeting }
@@ -631,7 +631,7 @@ const MeditationWithMarque = () => {
 
         // For yoga meditation, check pose changes
         if (selectedMeditation.id === "yoga_meditation" && currentYogaPose) {
-          const poseDuration = currentYogaPose.planDuration || currentYogaPose.duration;
+          const poseDuration = currentYogaPose.duration;
           if ((Date.now() - poseStartTime) >= poseDuration * 60 * 1000) {
             changeYogaPose();
           }
@@ -828,16 +828,101 @@ const MeditationWithMarque = () => {
                   className="bg-hero-gradient text-white hover:shadow-lg"
                   size="lg"
                   disabled={!selectedTime}
-                  onClick={startMeditation}
+                  onClick={() => {
+                    if (selectedMeditation?.id === "yoga_meditation") {
+                      setStep("select_poses");
+                    } else {
+                      startMeditation();
+                    }
+                  }}
                 >
                   <Play className="w-5 h-5 mr-2" />
-                  Начать медитацию
+                  {selectedMeditation?.id === "yoga_meditation" ? "Выбрать позы" : "Начать медитацию"}
                 </Button>
               </div>
             </>
           )}
 
-          {/* Step 3: Meditation Session */}
+          {/* Step 3: Select Yoga Poses */}
+          {step === "select_poses" && (
+            <>
+              <div className="text-center mb-12 animate-fade-in">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+                  Выберите йога-позы
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Выберите позы для вашей {selectedTime}-минутной йога-медитации
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Выбрано: {userSelectedPoses.length} поз{userSelectedPoses.length !== 1 ? '' : 'а'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 px-4 max-w-4xl mx-auto">
+                {yogaPoses.map((pose) => {
+                  const isSelected = userSelectedPoses.some(p => p.id === pose.id);
+                  return (
+                    <div
+                      key={pose.id}
+                      onClick={() => togglePoseSelection(pose)}
+                      className={`
+                        p-4 rounded-lg border-2 cursor-pointer transition-all
+                        ${isSelected
+                          ? 'border-primary bg-primary/10 shadow-md'
+                          : 'border-border hover:border-primary/50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 mt-1 flex-shrink-0 ${
+                          isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'
+                        }`}>
+                          {isSelected && <div className="w-full h-full rounded-full bg-primary scale-50" />}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground">{pose.name}</h3>
+                          <p className="text-sm text-muted-foreground italic mb-1">{pose.sanskrit}</p>
+                          <p className="text-sm text-muted-foreground mb-2">{pose.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>Сложность: {pose.difficulty}</span>
+                            <span>•</span>
+                            <span>{pose.duration} мин</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep("select_time");
+                    setUserSelectedPoses([]);
+                  }}
+                >
+                  Назад
+                </Button>
+                <Button
+                  className="bg-hero-gradient text-white hover:shadow-lg"
+                  size="lg"
+                  disabled={userSelectedPoses.length === 0}
+                  onClick={() => {
+                    // Set selected poses and start meditation
+                    setSelectedYogaPoses(userSelectedPoses);
+                    startMeditation();
+                  }}
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Начать медитацию ({userSelectedPoses.length} поз{userSelectedPoses.length !== 1 ? '' : 'а'})
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* Step 4: Meditation Session */}
           {step === "meditating" && (
             <>
               {selectedMeditation?.id === "yoga_meditation" ? (
