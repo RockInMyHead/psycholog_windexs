@@ -522,7 +522,9 @@ const MeditationWithMarque = () => {
 
   // Start meditation session
   const startMeditation = async () => {
+    console.log("🚀 START MEDITATION called", { selectedMeditation: selectedMeditation?.id, selectedTime, step });
     if (!selectedMeditation || !selectedTime) {
+      console.log("❌ Missing selectedMeditation or selectedTime");
       return;
     }
 
@@ -531,6 +533,7 @@ const MeditationWithMarque = () => {
 
     setStep("meditating");
     setIsSessionActive(true);
+    console.log("✅ Set isSessionActive to true");
     setElapsedTime(0);
 
     // Different setup for yoga vs regular meditation
@@ -562,12 +565,16 @@ const MeditationWithMarque = () => {
 
       // Фото каждые 30 секунд для анализа позы (только для йога-медитации)
       photoIntervalRef.current = window.setInterval(() => {
-        console.log("📸 PHOTO INTERVAL tick - meditation:", selectedMeditation?.id, "active:", isSessionActive);
+        console.log("📸 PHOTO INTERVAL tick - meditation:", selectedMeditation?.id, "active:", isSessionActive, "step:", step);
         if (selectedMeditation.id === "yoga_meditation" && isSessionActive) {
           console.log("🚀 Calling captureAndAnalyzePose");
           captureAndAnalyzePose();
         } else {
-          console.log("⏸️ Skipping pose analysis - conditions not met");
+          console.log("⏸️ Skipping pose analysis - conditions not met", {
+            isYoga: selectedMeditation.id === "yoga_meditation",
+            isActive: isSessionActive,
+            step: step
+          });
         }
       }, 30000);
     } else {
@@ -624,6 +631,7 @@ const MeditationWithMarque = () => {
         }
 
         if (newTime >= selectedTime! * 60) {
+          console.log("⏰ TIMER END: newTime", newTime, "selectedTime", selectedTime, "limit", selectedTime! * 60);
           endMeditation();
           return newTime;
         }
@@ -634,6 +642,7 @@ const MeditationWithMarque = () => {
 
   // End meditation
   const endMeditation = () => {
+    console.log("🏁 END MEDITATION called - stopping session");
     setIsSessionActive(false);
 
     if (photoIntervalRef.current) clearInterval(photoIntervalRef.current);
