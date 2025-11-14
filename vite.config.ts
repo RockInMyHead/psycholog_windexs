@@ -10,9 +10,9 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: process.env.REACT_APP_API_BASE_URL || 'https://psycholog.windexs.ru',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: process.env.REACT_APP_API_BASE_URL?.startsWith('https') ?? true,
+        secure: false,
         rewrite: (path) => path,
       },
     },
