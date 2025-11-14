@@ -1,14 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const HttpsProxyAgent = require('https-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Enable CORS
 app.use(cors({
-  origin: ['https://psycholog.windexs.ru', 'http://psycholog.windexs.ru'],
+  origin: ['http://localhost:8080', 'https://psycholog.windexs.ru', 'http://psycholog.windexs.ru'],
   credentials: true
 }));
 
